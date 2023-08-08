@@ -20,7 +20,6 @@ class TestAllBaseModelDocstrings(unittest.TestCase):
         self.b0 = BaseModel()
 
     def testModuleDocstring(self):
-        print(models.base_model.__doc__)
         self.assertGreater(len(models.base_model.__doc__), 1)
 
     def testClassDocstring(self):
