@@ -1,15 +1,54 @@
 #!/usr/bin/python3
 """Contains the entry point of the command interpreter"""
+import re
 import cmd
+import json
 from models import storage, MODELS
+
+
+regex = [
+    r'^(\w+)\.(\w+)\(\)$',
+    r'^(\w+)\.(\w+)\("([^"|.]*?)"\)$',
+    r'^(\w+)\.(\w+)\("(.*?)",\s"(.*?)",\s(".*?")\)$',
+    r'^(\w+)\.(\w+)\("(.*?)",\s"(.*?)",\s([0-9].*?)\)$',
+    r'^(\w+)\.(\w+)\("(.*?)",\s(\{.*?\})\)$'
+    ]
 
 
 class HBNBCommand(cmd.Cmd):
     """Represents the console"""
     prompt = "(hbnb) "
 
+    def precmd(self, line):
+        """Excuted just before the comand line is interpreted"""
+        match = None
+        i = 0
+        while not match and i < len(regex):
+            match = re.match(regex[i], line)
+            i += 1
+
+        if match:
+            m_list = list(match.groups())
+            tmp = m_list[0]
+            m_list[0] = m_list[1]
+            m_list[1] = tmp
+            if i == 5 and m_list[0] == "update":
+                attribs_dict = json.loads(m_list[-1])
+                del m_list[0]
+                commands = []
+                for key, value in attribs_dict.items():
+                    if isinstance(value, str):
+                        value = f'"{value}"'
+                    m_list[-1] = f"{key} {value}"
+                    command = " ".join(m_list)
+                    commands.append(command)
+                line = "update_dict {}".format(json.dumps(commands))
+                return cmd.Cmd.precmd(self, line)
+            line = " ".join(m_list)
+        return cmd.Cmd.precmd(self, line)
+
     def do_create(self, line):
-        """Creates a new instance of BaseModel"""
+        """Creates a new instance of a Model"""
         if not line:
             print("** class name missing **")
         elif line not in MODELS:
@@ -26,7 +65,7 @@ class HBNBCommand(cmd.Cmd):
         args = line.split()
         if not len(args):
             print("** class name missing **")
-        elif args[0] != "BaseModel":
+        elif args[0] not in MODELS:
             print("** class doesn't exist **")
         elif len(args) < 2:
             print("** instance id missing **")
@@ -40,7 +79,7 @@ class HBNBCommand(cmd.Cmd):
         args = line.split()
         if not len(args):
             print("** class name missing **")
-        elif args[0] != "BaseModel":
+        elif args[0] not in MODELS:
             print("** class doesn't exist **")
         elif len(args) < 2:
             print("** instance id missing **")
@@ -72,7 +111,7 @@ class HBNBCommand(cmd.Cmd):
         args = line.split()
         if not len(args):
             print("** class name missing **")
-        elif args[0] != "BaseModel":
+        elif args[0] not in MODELS:
             print("** class doesn't exist **")
         elif len(args) < 2:
             print("** instance id missing **")
@@ -88,14 +127,35 @@ class HBNBCommand(cmd.Cmd):
             value = args[3]
 
             if value.isdigit():
-                if "." in value:
-                    value = float(value)
-                else:
-                    value = int(value)
-            elif (value[0] == '"' and value[-1] == '"') or \
-                    (value[0] == "'" and value[-1] == "'"):
+                value = int(value)
+            elif (value[0] == '"' and value[-1] == '"'):
                 value = value[1:-1]
+            else:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
             setattr(obj, name, value)
+            obj.save()
+
+    def do_count(self, line):
+        """Retrieves the number of instances of a class"""
+        count = 0
+        if not line:
+            print(len(storage.all()))
+        elif line in MODELS:
+            for value in storage.all().values():
+                if value.__class__.__name__ == line:
+                    count += 1
+            print(count)
+        else:
+            print("** class doesn't exist **")
+
+    def do_update_dict(self, line):
+        """Updates model with a dictonary"""
+        commands = json.loads(line)
+        for command in commands:
+            self.do_update(command)
 
     def emptyline(self):
         """Define what happens when line is empty"""
@@ -107,6 +167,7 @@ class HBNBCommand(cmd.Cmd):
 
     def do_EOF(self, line):
         """Exits the console"""
+        print()
         return True
 
 
