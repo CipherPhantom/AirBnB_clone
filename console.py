@@ -1,174 +1,275 @@
 #!/usr/bin/python3
-"""Contains the entry point of the command interpreter"""
-import re
+"""
+This program contains the entry point of
+the command interpreter (console).
+"""
 import cmd
+from models import storage
+from models import MODELS
+import re
 import json
-from models import storage, MODELS
 
 
-regex = [
-    r'^(\w+)\.(\w+)\(\)$',
-    r'^(\w+)\.(\w+)\("([^"|.]*?)"\)$',
-    r'^(\w+)\.(\w+)\("(.*?)",\s"(.*?)",\s(".*?")\)$',
-    r'^(\w+)\.(\w+)\("(.*?)",\s"(.*?)",\s([0-9].*?)\)$',
-    r'^(\w+)\.(\w+)\("(.*?)",\s(\{.*?\})\)$'
-    ]
+regex_line = r"^(?:(?P<class>\S+)\.(?P<cmd>\S+)\((?P<args>.*)\))$"
+regex_id_dict = r'^(?:(?P<id>".*?"), (?P<dct>\{.*?\}))$'
+regex_id_attr_val = (r'^(?:(?:(?P<id>".*?"),) (?:(?P<attr>".*?"),) '
+                     r'(?P<val>"[^"]*?"|\d+\.\d+|\d+))$')
+# regex_id_attr = r'^(?:["\'](?P<id>\S+)["\'], ["\'](?P<attr>\S+)["\'])$'
+regex_id_attr = r'^(?:(?:(?P<id>".*?"),) (?P<attr>".*?"))$'
+# regex_id = r'^(?:["\'](?P<id>\S+?)["\'])$'
+regex_id = r'^(?P<id>".*?")$'
+
+
+def split_l(line):
+    """
+    This function splits a line with a syntax resembling
+    that of the Unix shell using the ``re`` module.
+
+    The split function of the `shlex` module can also be used but re is faster.
+
+    Args:
+        line(str): Line to be split.
+    Returns:
+        (list): List of tokens split from line
+    """
+    return re.findall(r'[^"\s]\S*|["\'].+?["\']', line)
 
 
 class HBNBCommand(cmd.Cmd):
-    """Represents the console"""
+    """
+    This class will be used to define functions implemented in
+    the command interpreter
+    """
+
     prompt = "(hbnb) "
 
-    def precmd(self, line):
-        """Excuted just before the comand line is interpreted"""
-        match = None
-        i = 0
-        while not match and i < len(regex):
-            match = re.match(regex[i], line)
-            i += 1
-
-        if match:
-            m_list = list(match.groups())
-            tmp = m_list[0]
-            m_list[0] = m_list[1]
-            m_list[1] = tmp
-            if i == 5 and m_list[0] == "update":
-                attribs_dict = json.loads(m_list[-1])
-                del m_list[0]
-                commands = []
-                for key, value in attribs_dict.items():
-                    if isinstance(value, str):
-                        value = f'"{value}"'
-                    m_list[-1] = f"{key} {value}"
-                    command = " ".join(m_list)
-                    commands.append(command)
-                line = "update_dict {}".format(json.dumps(commands))
-                return cmd.Cmd.precmd(self, line)
-            line = " ".join(m_list)
-        return cmd.Cmd.precmd(self, line)
-
-    def do_create(self, line):
-        """Creates a new instance of a Model"""
-        if not line:
-            print("** class name missing **")
-        elif line not in MODELS:
-            print("** class doesn't exist **")
-        else:
-            obj = MODELS[line]()
-            obj.save()
-            print(obj.id)
-
-    def do_show(self, line):
-        """Prints the string representation of an
-        instance based on the class name
-        """
-        args = line.split()
-        if not len(args):
-            print("** class name missing **")
-        elif args[0] not in MODELS:
-            print("** class doesn't exist **")
-        elif len(args) < 2:
-            print("** instance id missing **")
-        elif f"{args[0]}.{args[1]}" not in storage.all():
-            print("** no instance found **")
-        else:
-            print(storage.all()[f"{args[0]}.{args[1]}"])
-
-    def do_destroy(self, line):
-        """Deletes an instance based on the class name and id"""
-        args = line.split()
-        if not len(args):
-            print("** class name missing **")
-        elif args[0] not in MODELS:
-            print("** class doesn't exist **")
-        elif len(args) < 2:
-            print("** instance id missing **")
-        elif f"{args[0]}.{args[1]}" not in storage.all():
-            print("** no instance found **")
-        else:
-            del storage.all()[f"{args[0]}.{args[1]}"]
-            storage.save()
-
-    def do_all(self, line):
-        """Prints all string representation of all instances
-        based or not on the class name
-        """
-        objs_str = []
-        if not line:
-            for value in storage.all().values():
-                objs_str.append(str(value))
-            print(objs_str)
-        elif line in MODELS:
-            for value in storage.all().values():
-                if value.__class__.__name__ == line:
-                    objs_str.append(str(value))
-            print(objs_str)
-        else:
-            print("** class doesn't exist **")
-
-    def do_update(self, line):
-        """Updates an instance based on the class name and id"""
-        args = line.split()
-        if not len(args):
-            print("** class name missing **")
-        elif args[0] not in MODELS:
-            print("** class doesn't exist **")
-        elif len(args) < 2:
-            print("** instance id missing **")
-        elif f"{args[0]}.{args[1]}" not in storage.all():
-            print("** no instance found **")
-        elif len(args) < 3:
-            print("** attribute name missing **")
-        elif len(args) < 4:
-            print("** value missing **")
-        else:
-            obj = storage.all()[f"{args[0]}.{args[1]}"]
-            name = args[2]
-            value = args[3]
-
-            if value.isdigit():
-                value = int(value)
-            elif (value[0] == '"' and value[-1] == '"'):
-                value = value[1:-1]
-            else:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-            setattr(obj, name, value)
-            obj.save()
-
-    def do_count(self, line):
-        """Retrieves the number of instances of a class"""
-        count = 0
-        if not line:
-            print(len(storage.all()))
-        elif line in MODELS:
-            for value in storage.all().values():
-                if value.__class__.__name__ == line:
-                    count += 1
-            print(count)
-        else:
-            print("** class doesn't exist **")
-
-    def do_update_dict(self, line):
-        """Updates model with a dictonary"""
-        commands = json.loads(line)
-        for command in commands:
-            self.do_update(command)
-
     def emptyline(self):
-        """Define what happens when line is empty"""
+        """This line overwrites the `emptyline + ENTER` default command"""
         pass
 
-    def do_quit(self, line):
-        """Exits the console"""
+    def do_quit(self, arg):
+        """Quit command to exit the program
+        """
         return True
 
-    def do_EOF(self, line):
-        """Exits the console"""
-        print()
+    do_EOF = do_quit
+
+    def handle_update(self, match, line):
+        """
+        This function handles an update command
+        when passed in the methodlike form.
+
+        Args:
+            match(`obj`:re): This re object holds the initial line match groups
+            line(str): Line of input
+        """
+        id_args_or_id_dict = match.group('args')
+        match_dict = re.search(regex_id_dict, id_args_or_id_dict)
+        match_id_attr_val = re.search(regex_id_attr_val, id_args_or_id_dict)
+        match_id_attr = re.search(regex_id_attr, id_args_or_id_dict)
+        match_id = re.search(regex_id, id_args_or_id_dict)
+
+        if match_dict:
+            dict_str = match_dict.group('dct').replace('\'', '"')
+            dct_object = json.loads(dict_str)
+            dct_it = list(dct_object.items())
+            if len(dct_it) == 0:
+                return ''
+            for i in range(len(dct_it)):
+                new_line = (f"{match.group('cmd')} {match.group('class')} "
+                            f"{match_dict.group('id')} {dct_it[i][0]} "
+                            f'"{dct_it[i][1]}"')
+                if len(dct_it) == 1 or i == len(dct_it) - 1:
+                    return new_line
+                else:
+                    ret_val = self.onecmd(new_line)
+                    if ret_val is False:
+                        return ''
+        elif match_id_attr_val:
+            new_line = (f"{match.group('cmd')} {match.group('class')} "
+                        f"{match_id_attr_val.group('id')} "
+                        f"{match_id_attr_val.group('attr')} "
+                        f'"{match_id_attr_val.group("val")}"')
+            return new_line
+        elif match_id_attr:
+            new_line = (f"{match.group('cmd')} {match.group('class')} "
+                        f"{match_id_attr.group('id')} "
+                        f"{match_id_attr.group('attr')}")
+            return new_line
+        elif match_id:
+            new_line = (f"{match.group('cmd')} {match.group('class')} "
+                        f"{match_id.group('id')}")
+            return new_line
+        elif match.group('args').strip() == '':
+            new_line = "{} {} {}".format(match.group('cmd'),
+                                         match.group('class'),
+                                         match.group('args'))
+            return new_line
+        else:
+            return line
+
+    def precmd(self, line):
+        """
+        Hook method executed just before the command line line is
+        interpreted, but after prompt is generated and issued.
+
+        Args:
+            line(str): Line of input
+        Returns:
+            (str)
+        """
+        match = re.search(regex_line, line)
+        if match:
+            m_args = match.group('args')
+            m_args_is_blank = m_args == ''
+            m_args_maybe_id = re.fullmatch('^["\'].*["\']$', m_args)
+        if match is None:
+            return line
+        elif match.group('cmd') == 'update':
+            return (self.handle_update(match, line))
+        elif (match.group('cmd') in ['all', 'count']
+                and not m_args_is_blank):
+            # Invalid Syntax
+            return line
+        elif (match.group('cmd') in ['destroy', 'show']
+                and m_args_maybe_id is None):
+            return line
+        else:
+            new_line = "{} {} {}".format(match.group('cmd'),
+                                         match.group('class'),
+                                         match.group('args'))
+            return new_line
+
+    @staticmethod
+    def initial_checks(arg_l, count=3):
+        """This function performs error checks that common to some
+        interpreter commands.
+
+        Args:
+            arg_l(list): Given argument to perform error checks on
+            count(int): Number of checks to perform for given call
+
+        Returns:
+            (bool): True if an error occured else False
+        """
+        if not arg_l:
+            print("** class name missing **")
+        elif count >= 2 and arg_l[0] not in MODELS:
+            print("** class doesn't exist **")
+        elif count >= 3 and len(arg_l) == 1:
+            print("** instance id missing **")
+        else:
+            return False
         return True
+
+    def do_create(self, arg):
+        """Creates a new instance of BaseModel,
+        saves it (to the JSON file) and prints the id.
+        Ex: $ create BaseModel
+        """
+        arg_l = split_l(arg)
+        arg_l = [x.strip('"\'') for x in arg_l]
+        if self.initial_checks(arg_l, 2):
+            pass
+        else:
+            instance = MODELS[arg]()
+            storage.save()
+            print(instance.id)
+
+    def do_show(self, arg):
+        """Prints the string representation of an instance,
+        based on the class name and id.
+        Ex: $ show BaseModel 1234-1234-1234
+        """
+        arg_l = split_l(arg)
+        arg_l = [x.strip('"\'') for x in arg_l]
+        if self.initial_checks(arg_l):
+            pass
+        else:
+            key = f"{arg_l[0]}.{arg_l[1]}"
+            o = storage.all().get(key)
+            print(o if o else "** no instance found **")
+
+    def do_destroy(self, arg):
+        """Deletes an instance based on the class name and id and
+        saves the change into the JSON file.
+        Ex: $ destroy BaseModel 1234-1234-1234.
+        """
+        arg_l = split_l(arg)
+        arg_l = [x.strip('"\'') for x in arg_l]
+        if self.initial_checks(arg_l):
+            pass
+        else:
+            key = f"{arg_l[0]}.{arg_l[1]}"
+            if storage.all().pop(key, None):
+                storage.save()
+            else:
+                print("** no instance found **")
+
+    def do_all(self, arg):
+        """Prints all string representation of all instances
+        based or not on the class name.
+        Ex: $ all BaseModel or $ all or $ <class name>.all().
+        """
+        arg_l = split_l(arg)
+        arg_l = [x.strip('"\'') for x in arg_l]
+        if len(arg_l) >= 1 and arg_l[0] not in MODELS:
+            print("** class doesn't exist **")
+        else:
+            if not arg_l:
+                all_o = [o for o in storage.all().values()]
+            else:
+                all_o = [o for o in storage.all().values()
+                         if type(o).__name__ == arg_l[0]]
+            all_inst = [str(x) for x in all_o]
+            all_inst.reverse()
+            print(all_inst)
+
+    def do_count(self, arg):
+        """Counts all instances based on the class name.
+        Ex: $ count BaseModel or $ <class name>.count()
+        """
+        arg_l = split_l(arg)
+        arg_l = [x.strip('"\'') for x in arg_l]
+        if arg_l[0] not in MODELS:
+            print("** class doesn't exist **")
+        else:
+            all_o = [o for o in storage.all().values()
+                     if type(o).__name__ == arg_l[0]]
+            print(len(all_o))
+
+    def do_update(self, arg):
+        """Update an instance based on the class name and id by adding/updating
+        attribute and save the change into the JSON file).
+        Ex: $ update BaseModel 1234-1234-1234 email "aibnb@mail.com"
+        Returns:
+            None to indicate success or 1 to indicate error
+        """
+        arg_l = split_l(arg)
+        arg_l = [x.strip('"\'') for x in arg_l]
+        if self.initial_checks(arg_l):
+            pass
+        elif not (o := storage.all().get(f"{arg_l[0]}.{arg_l[1]}")):
+            print("** no instance found **")
+        elif len(arg_l) == 2:
+            print("** attribute name missing **")
+        elif len(arg_l) == 3:
+            print("** value missing **")
+        else:
+            val = arg_l[3]
+            val_type = type(getattr(o, arg_l[2]))
+            val = val_type(val) if val_type != int else int(float(val))
+            """
+            try:
+                val_num = float(val)
+                val = int(val_num) if '.' not in val else val_num
+            except (ValueError, TypeError):
+                pass
+            """
+            setattr(o, arg_l[2], val)
+            storage.save()
+            return None
+        return False
 
 
 if __name__ == '__main__':
