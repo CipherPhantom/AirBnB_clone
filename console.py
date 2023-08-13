@@ -31,19 +31,7 @@ class HBNBCommand(cmd.Cmd):
             m_list = list(match.groups())
             tmp = m_list[0]
             m_list[0] = m_list[1]
-            m_list[1] = tmp
-            if i == 5 and m_list[0] == "update":
-                attribs_dict = json.loads(m_list[-1])
-                del m_list[0]
-                commands = []
-                for key, value in attribs_dict.items():
-                    if isinstance(value, str):
-                        value = f'"{value}"'
-                    m_list[-1] = f"{key} {value}"
-                    command = " ".join(m_list)
-                    commands.append(command)
-                line = "update_dict {}".format(json.dumps(commands))
-                return cmd.Cmd.precmd(self, line)
+            m_list[1] = tmp 
             line = " ".join(m_list)
         return cmd.Cmd.precmd(self, line)
 
@@ -68,7 +56,7 @@ class HBNBCommand(cmd.Cmd):
         elif args[0] not in MODELS:
             print("** class doesn't exist **")
         elif len(args) < 2:
-            print("** instance id missing **")
+           print("** instance id missing **")
         elif f"{args[0]}.{args[1]}" not in storage.all():
             print("** no instance found **")
         else:
@@ -123,6 +111,16 @@ class HBNBCommand(cmd.Cmd):
             print("** value missing **")
         else:
             obj = storage.all()[f"{args[0]}.{args[1]}"]
+            if "{" in args[2]:
+                attrs = " ".join(args[2:]).replace("'", '"')
+                try:
+                    attrs = json.loads(attrs)
+                    for key, value in attrs.items():
+                        setattr(obj, key, value)
+                    obj.save()
+                except json.decoder.JSONDecodeError:
+                    pass
+                return False
             name = args[2]
             value = args[3]
 
@@ -150,13 +148,7 @@ class HBNBCommand(cmd.Cmd):
             print(count)
         else:
             print("** class doesn't exist **")
-
-    def do_update_dict(self, line):
-        """Updates model with a dictonary"""
-        commands = json.loads(line)
-        for command in commands:
-            self.do_update(command)
-
+ 
     def emptyline(self):
         """Define what happens when line is empty"""
         pass
