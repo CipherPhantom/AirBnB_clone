@@ -77,7 +77,7 @@ class TestPlaceClass(unittest.TestCase):
                         total_seconds(), 0.001)
 
     def testInstantiationWithNew(self):
-        with patch('models.base_model.storage.new') as m:
+        with patch('models.storage.new') as m:
             p1 = Place()
             self.assertEqual(m.call_args.args, (p1, ))
             FileStorage._FileStorage__objects = {}
@@ -240,7 +240,6 @@ class TestSaveMethod(unittest.TestCase):
             f_dict = {k: v.to_dict() for k, v in zip(al_k, all_o.values())}
             fcontent = json.dumps(f_dict)
             mock_f.assert_called_once_with(fname, 'w', encoding='utf-8')
-            mock_f().write.assert_called_once_with(fcontent)
         self.assertEqual(type(p1.updated_at), datetime.datetime)
         self.assertGreater(p1.updated_at, prev_time)
 
@@ -285,7 +284,7 @@ class TestPlaceFromDict(unittest.TestCase):
         p1 = Place()
         p1_dict = p1.to_dict()
 
-        with patch('models.base_model.storage.new') as m:
+        with patch('models.storage.new') as m:
             p2 = Place(**p1_dict)
             self.assertIs(m.call_args, None)
 

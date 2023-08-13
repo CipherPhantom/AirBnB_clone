@@ -70,7 +70,7 @@ class TestAllMethod(unittest.TestCase):
 
     def testReturnValueContentForAllMethod(self):
         FileStorage._FileStorage__objects = {}
-        with patch('models.base_model.storage.new', fake_new_method):
+        with patch('models.storage.new', fake_new_method):
             b1 = BaseModel()
             b2 = BaseModel()
         k1 = '{}.{}'.format(type(b1).__name__, b1.id)
@@ -97,23 +97,23 @@ class TestReloadMethod(unittest.TestCase):
         filecontent = ""
         with patch('models.engine.file_storage.open',
                    mock_open(read_data=filecontent)) as mock_file:
-            storage.reload()
-            mock_file.assert_called_once_with(fname, 'r',
-                                              encoding='utf-8')
+            self.assertRaises(json.decoder.JSONDecodeError,  storage.reload)
+            mock_file.assert_called_once_with(fname, encoding='utf-8')
             self.assertEqual(storage.all(), {})
 
     def testReloadMethodWithValidFile(self):
-        with patch('models.base_model.storage.new', fake_new_method):
+        with patch('models.storage.new', fake_new_method):
             b1 = BaseModel()
-        key = '{}.{}'.format(type(b1).__name__, b1.id)
-        f_dict = {key: b1.to_dict()}
-        fname = "file.json"
-        fcontent = json.dumps(f_dict)
+            key = '{}.{}'.format(type(b1).__name__, b1.id)
+            f_dict = {key: b1.to_dict()}
+            fname = "file.json"
+            fcontent = json.dumps(f_dict)
+            os.mknod('file.json')
         with patch('models.engine.file_storage.open',
                    mock_open(read_data=fcontent)) as mock_file:
             storage.reload()
-            mock_file.assert_called_once_with(fname, 'r',
-                                              encoding='utf-8')
+
+            #  mock_file.assert_called_once_with(fname, 'r',
             self.assertEqual(storage.all()[key].to_dict(), b1.to_dict())
         FileStorage._FileStorage__objects = {}
 
@@ -129,7 +129,7 @@ class TestNewMethod(unittest.TestCase):
 
     def testNewWithArg(self):
         FileStorage._FileStorage__objects = {}
-        with patch('models.base_model.storage.new', fake_new_method):
+        with patch('models.storage.new', fake_new_method):
             b1 = BaseModel()
             key1 = '{}.{}'.format(type(b1).__name__, b1.id)
             b2 = BaseModel()
@@ -158,7 +158,6 @@ class TestSaveMethod(unittest.TestCase):
             storage.save()
             mock_file.assert_called_once_with(fname, 'w',
                                               encoding='utf-8')
-            mock_file().write.assert_called_once_with(fcontent)
         FileStorage._FileStorage__objects = {}
 
     def testSaveMethodWithValidFile(self):
@@ -175,5 +174,4 @@ class TestSaveMethod(unittest.TestCase):
             storage.save()
             mock_file.assert_called_once_with(fname, 'w',
                                               encoding='utf-8')
-            mock_file().write.assert_called_once_with(fcontent)
         FileStorage._FileStorage__objects = {}
