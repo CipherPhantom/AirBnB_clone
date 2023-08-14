@@ -259,8 +259,9 @@ class HBNBCommand(cmd.Cmd):
         else:
             val = arg_l[3]
             if not hasattr(o, arg_l[2]):
-                return ''
-            val_type = type(getattr(o, arg_l[2]))
+                val_type = str
+            else:
+                val_type = type(getattr(o, arg_l[2]))
             val = val_type(val) if val_type != int else int(float(val))
             """
             try:
