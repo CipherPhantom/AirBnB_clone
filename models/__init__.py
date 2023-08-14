@@ -1,25 +1,24 @@
 #!/usr/bin/python3
+"""Configures the models package."""
+from .city import City
+from .user import User
+from .place import Place
+from .state import State
+from .review import Review
+from .amenity import Amenity
+from .base_model import BaseModel
 from .engine.file_storage import FileStorage
 
-storage = FileStorage()
 
-if True:
-    from .base_model import BaseModel
-    from .user import User
-    from .state import State
-    from .city import City
-    from .amenity import Amenity
-    from .place import Place
-    from .review import Review
+storage = FileStorage()
+storage.reload()
 
 MODELS = {
-          "BaseModel": BaseModel,
-          "User": User,
-          "State": State,
-          "City": City,
-          "Amenity": Amenity,
-          "Place": Place,
-          "Review": Review
-          }
-
-storage.reload()
+        "City": City,
+        "User": User,
+        "Place": Place,
+        "State": State,
+        "Review": Review,
+        "Amenity": Amenity,
+        "BaseModel": BaseModel,
+        }
