@@ -1,13 +1,16 @@
 #!/usr/bin/python3
-"""Defines an Amenity class"""
+"""
+This module contains the class ``Amenity`` which inherits
+from ``BaseModel``
+"""
 from models.base_model import BaseModel
 
 
 class Amenity(BaseModel):
-    """Represents an amenity"""
+    """
+    This class defines attributes/methods for Amenity.
 
-    name = ""
-
-    def __init__(self, *args, **kwargs):
-        """Initializes the amenity"""
-        super().__init__(self, *args, **kwargs)
+    Attributes:
+        name(str):  Name of Amenity. Empty string initially
+    """
+    name = ''

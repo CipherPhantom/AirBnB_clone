@@ -1,14 +1,17 @@
 #!/usr/bin/python3
-"""Defines a City class"""
+"""
+This module contains the class ``City`` which inherits
+from ``BaseModel``
+"""
 from models.base_model import BaseModel
 
 
 class City(BaseModel):
-    """Represents a city"""
+    """
+    This class defines attributes/methods for the City.
 
-    state_id = ""
-    name = ""
-
-    def __init__(self, *args, **kwargs):
-        """Initializes the city"""
-        super().__init__(self, *args, **kwargs)
+    Attributes:
+        state_id(str):  It will be the State.id. Empty initially
+        name(str):  Name of City. Empty string initially
+    """
+    state_id, name = ('', '')
