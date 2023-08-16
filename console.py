@@ -31,7 +31,7 @@ class HBNBCommand(cmd.Cmd):
             m_list = list(match.groups())
             tmp = m_list[0]
             m_list[0] = m_list[1]
-            m_list[1] = tmp 
+            m_list[1] = tmp
             line = " ".join(m_list)
         return cmd.Cmd.precmd(self, line)
 
@@ -56,7 +56,7 @@ class HBNBCommand(cmd.Cmd):
         elif args[0] not in MODELS:
             print("** class doesn't exist **")
         elif len(args) < 2:
-           print("** instance id missing **")
+            print("** instance id missing **")
         elif f"{args[0]}.{args[1]}" not in storage.all():
             print("** no instance found **")
         else:
@@ -148,7 +148,7 @@ class HBNBCommand(cmd.Cmd):
             print(count)
         else:
             print("** class doesn't exist **")
- 
+
     def emptyline(self):
         """Define what happens when line is empty"""
         pass
