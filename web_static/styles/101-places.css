@@ -1,5 +1,6 @@
 .places {
     text-align: left;
+    margin-bottom: 200px;
 }
 
 .places h1 {
@@ -133,4 +134,8 @@ article .amenities ul li {
     background-image: url('../images/icon_wifi.png');
 }
 
-
+.articles {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
